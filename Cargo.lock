@@ -1131,6 +1131,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "uchat_cookie",
+ "uchat_domain",
  "url",
  "wasm-bindgen",
  "web-sys",
