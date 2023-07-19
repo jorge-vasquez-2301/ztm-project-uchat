@@ -4,6 +4,7 @@
 #![allow(non_snake_case)]
 
 pub mod app;
+pub mod elements;
 pub mod page;
 pub mod util;
 
