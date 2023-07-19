@@ -22,6 +22,12 @@ impl PageState {
             form_errors: KeyedNotifications::default(),
         }
     }
+
+    fn can_submit(&self) -> bool {
+        !(self.form_errors.has_messages()
+            || self.username.current().is_empty()
+            || self.password.current().is_empty())
+    }
 }
 
 #[inline_props]
@@ -90,8 +96,17 @@ pub fn Register(cx: Scope) -> Element {
     });
 
     let password_oninput = sync_handler!([page_state], move |ev: FormEvent| {
+        match Password::new(&ev.value) {
+            Ok(_) => page_state.with_mut(|state| state.form_errors.remove("bad-password")),
+            Err(e) => {
+                page_state.with_mut(|state| state.form_errors.set("bad-password", e.to_string()))
+            }
+        }
         page_state.with_mut(|state| state.password.set(ev.value.clone()));
     });
+
+    let submit_btn_style =
+        maybe_class!("btn-disabled", !page_state.with(|state| state.can_submit()));
 
     cx.render(rsx! {
         form {
@@ -115,8 +130,9 @@ pub fn Register(cx: Scope) -> Element {
             }
 
             button {
-                class: "btn",
+                class: "btn {submit_btn_style}",
                 r#type: "submit",
+                disabled: !page_state.with(|state| state.can_submit()),
                 "Signup"
             }
         }
