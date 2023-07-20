@@ -51,7 +51,7 @@ db-migrate:
 # reset the database
 db-reset:
     diesel database reset
-    psql -d postgres -c 'DROP DATABASE uchat_test;' || true
+    psql -U postgres -d postgres -c 'DROP DATABASE uchat_test;' || true
 
 # create a new database migration
 db-new-migration NAME:
