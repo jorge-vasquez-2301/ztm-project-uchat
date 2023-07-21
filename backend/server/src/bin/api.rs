@@ -46,17 +46,14 @@ async fn run() -> Result<()> {
         Err(_) => tracing::debug!(target: "uchat_server", dot_env_found = false),
     }
 
-    match args.command {
-        Some(Command::GenKey) => {
-            let mut rng = uchat_crypto::new_rng();
-            tracing::info!(target: "uchat_server", "generating private key...");
-            let (key, _) = uchat_server::cli::gen_keys(&mut rng)?;
-            let path = "private_key.base64";
-            std::fs::write(path, key.as_str())?;
-            tracing::info!(target: "uchat_server", path=path, "private key saved to disk");
-            tracing::info!(target: "uchat_server", path=path, "set API_PRIVATE_KEY environment variable with the content of the key in order to use it");
-        }
-        None => (),
+    if let Some(Command::GenKey) = args.command {
+        let mut rng = uchat_crypto::new_rng();
+        tracing::info!(target: "uchat_server", "generating private key...");
+        let (key, _) = uchat_server::cli::gen_keys(&mut rng)?;
+        let path = "private_key.base64";
+        std::fs::write(path, key.as_str())?;
+        tracing::info!(target: "uchat_server", path=path, "private key saved to disk");
+        tracing::info!(target: "uchat_server", path=path, "set API_PRIVATE_KEY environment variable with the content of the key in order to use it");
     }
 
     tracing::debug!(target: "uchat_server", "loading signing keys");
