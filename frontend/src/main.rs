@@ -9,6 +9,7 @@ pub mod page;
 pub mod util;
 
 use cfg_if::cfg_if;
+use util::ApiClient;
 
 pub const ROOT_API_URL: &str = "http://127.0.0.1:8070/";
 
@@ -25,6 +26,7 @@ cfg_if! {
 
 fn main() {
     init_log();
+    ApiClient::init();
     dioxus_web::launch(app::App)
 }
 

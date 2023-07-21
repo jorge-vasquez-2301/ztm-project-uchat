@@ -5,7 +5,9 @@ use uchat_domain::*;
 
 use crate::{
     elements::{KeyedNotificationBox, KeyedNotifications},
+    fetch_json,
     prelude::*,
+    util::ApiClient,
 };
 
 pub struct PageState {
@@ -82,15 +84,39 @@ pub fn PasswordInput<'a>(
 }
 
 pub fn Register(cx: Scope) -> Element {
+    let api_client = ApiClient::global();
     let page_state = PageState::new(cx);
     let page_state = use_ref(cx, || page_state);
+
+    let form_onsubmit = async_handler!(&cx, [api_client, page_state], move |_| async move {
+        use uchat_endpoint::user::{CreateUser, CreateUserOk};
+
+        let request_data = {
+            use uchat_domain::{Password, Username};
+            CreateUser {
+                username: Username::new(
+                    page_state.with(|state| state.username.current().to_string()),
+                )
+                .unwrap(),
+                password: Password::new(
+                    page_state.with(|state| state.password.current().to_string()),
+                )
+                .unwrap(),
+            }
+        };
+
+        let response = fetch_json!(<CreateUserOk>, api_client, request_data);
+        match response {
+            Ok(res) => (),
+            Err(e) => (),
+        }
+    });
 
     let username_oninput = sync_handler!([page_state], move |ev: FormEvent| {
         match Username::new(&ev.value) {
             Ok(_) => page_state.with_mut(|state| state.form_errors.remove("bad-username")),
-            Err(e) => {
-                page_state.with_mut(|state| state.form_errors.set("bad-username", e.to_string()))
-            }
+            Err(e) => page_state
+                .with_mut(|state| state.form_errors.set("bad-username", e.formatted_error())),
         }
         page_state.with_mut(|state| state.username.set(ev.value.clone()));
     });
@@ -98,9 +124,8 @@ pub fn Register(cx: Scope) -> Element {
     let password_oninput = sync_handler!([page_state], move |ev: FormEvent| {
         match Password::new(&ev.value) {
             Ok(_) => page_state.with_mut(|state| state.form_errors.remove("bad-password")),
-            Err(e) => {
-                page_state.with_mut(|state| state.form_errors.set("bad-password", e.to_string()))
-            }
+            Err(e) => page_state
+                .with_mut(|state| state.form_errors.set("bad-password", e.formatted_error())),
         }
         page_state.with_mut(|state| state.password.set(ev.value.clone()));
     });
@@ -112,7 +137,7 @@ pub fn Register(cx: Scope) -> Element {
         form {
             class: "flex flex-col gap-5",
             prevent_default: "onsubmit",
-            onsubmit: |_|{},
+            onsubmit: form_onsubmit,
 
             UsernameInput {
                 state: page_state.with(|state| state.username.clone()),

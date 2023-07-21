@@ -6,3 +6,7 @@ pub mod ids;
 mod user;
 
 pub use user::*;
+
+pub trait UserFacingError {
+    fn formatted_error(&self) -> &'static str;
+}
