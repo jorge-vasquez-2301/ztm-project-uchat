@@ -1,11 +1,38 @@
 use axum::{async_trait, Json};
 use chrono::{Duration, Utc};
 use hyper::StatusCode;
+use uchat_domain::ids::*;
 use uchat_endpoint::user::{CreateUser, CreateUserOk, Login, LoginOk};
+use uchat_query::session::Session;
 
 use crate::{error::ApiResult, extractor::DbConnection, AppState};
 
 use super::PublicApiRequest;
+
+#[derive(Clone)]
+pub struct SessionSignature(String);
+
+fn new_session(
+    state: &AppState,
+    conn: &mut uchat_query::AsyncConnection,
+    user_id: UserId,
+) -> ApiResult<(Session, SessionSignature, Duration)> {
+    let fingerprint = serde_json::json!({});
+    let session_duration = Duration::weeks(3);
+    let session = uchat_query::session::new(conn, user_id, session_duration, fingerprint.into())?;
+
+    let mut rng = state.rng.clone();
+
+    let signature = state
+        .signing_keys
+        .sign(&mut rng, session.id.as_uuid().as_bytes());
+
+    Ok((
+        session,
+        SessionSignature(uchat_crypto::encode_base64(signature)),
+        session_duration,
+    ))
+}
 
 #[async_trait]
 impl PublicApiRequest for CreateUser {
@@ -14,18 +41,23 @@ impl PublicApiRequest for CreateUser {
     async fn process_request(
         self,
         DbConnection(mut conn): DbConnection,
-        _state: AppState,
+        state: AppState,
     ) -> ApiResult<Self::Response> {
         let password_hash = uchat_crypto::hash_password(self.password)?;
         let user_id = uchat_query::user::new(&mut conn, password_hash, &self.username)?;
 
         tracing::info!(username = self.username.as_ref(), "new user created");
 
+        let (session, signature, duration) = new_session(&state, &mut conn, user_id)?;
+
         Ok((
             StatusCode::CREATED,
             Json(CreateUserOk {
                 user_id,
                 username: self.username,
+                session_signature: signature.0,
+                session_id: session.id,
+                session_expires: Utc::now() + duration,
             }),
         ))
     }
@@ -51,34 +83,12 @@ impl PublicApiRequest for Login {
 
         let user = uchat_query::user::find(&mut conn, &self.username)?;
 
-        // new session
-        let (session, signature, duration) = {
-            let fingerprint = serde_json::json!({});
-            let session_duration = Duration::weeks(3);
-            let session = uchat_query::session::new(
-                &mut conn,
-                user.id,
-                session_duration,
-                fingerprint.into(),
-            )?;
-
-            let mut rng = state.rng.clone();
-
-            let signature = state
-                .signing_keys
-                .sign(&mut rng, session.id.as_uuid().as_bytes());
-
-            (
-                session,
-                uchat_crypto::encode_base64(signature),
-                session_duration,
-            )
-        };
+        let (session, signature, duration) = new_session(&state, &mut conn, user.id)?;
 
         Ok((
             StatusCode::OK,
             Json(LoginOk {
-                session_signature: signature,
+                session_signature: signature.0,
                 session_id: session.id,
                 session_expires: Utc::now() + duration,
                 display_name: user.display_name,

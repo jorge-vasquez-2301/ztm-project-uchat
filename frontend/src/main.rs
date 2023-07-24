@@ -33,4 +33,5 @@ fn main() {
 pub mod prelude {
     pub use crate::page;
     pub use crate::util::{async_handler, maybe_class, sync_handler};
+    pub use dioxus_router::{use_route, use_router};
 }
