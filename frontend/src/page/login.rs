@@ -10,7 +10,7 @@ use crate::{
     util::ApiClient,
 };
 
-pub struct PageState {
+struct PageState {
     username: UseState<String>,
     password: UseState<String>,
     form_errors: KeyedNotifications,
@@ -33,7 +33,7 @@ impl PageState {
 }
 
 #[inline_props]
-pub fn UsernameInput<'a>(
+fn UsernameInput<'a>(
     cx: Scope<'a>,
     state: UseState<String>,
     oninput: EventHandler<'a, FormEvent>,
@@ -58,7 +58,7 @@ pub fn UsernameInput<'a>(
 }
 
 #[inline_props]
-pub fn PasswordInput<'a>(
+fn PasswordInput<'a>(
     cx: Scope<'a>,
     state: UseState<String>,
     oninput: EventHandler<'a, FormEvent>,
@@ -117,7 +117,7 @@ pub fn Login(cx: Scope) -> Element {
                     );
                     router.navigate_to(page::HOME);
                 }
-                Err(e) => (),
+                Err(_) => (),
             }
         });
 

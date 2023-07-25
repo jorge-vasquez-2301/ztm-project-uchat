@@ -4,8 +4,6 @@ use uchat_domain::{ids::*, Password, Username};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::Endpoint;
-
 #[derive(Clone, Deserialize, Serialize)]
 pub struct CreateUser {
     pub username: Username,

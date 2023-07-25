@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uchat_domain::ids::PostId;
 
-use crate::Endpoint;
-
 use super::{Content, NewPostOptions};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
