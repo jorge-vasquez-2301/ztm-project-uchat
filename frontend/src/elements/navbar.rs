@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 
 #[inline_props]
 pub fn NewPostPopup(cx: Scope, hide: UseState<bool>) -> Element {
+    let router = use_router(cx);
     let hide_class = maybe_class!("hidden", *hide.get());
 
     const BUTTON_CLASS: &str = "
@@ -42,7 +43,10 @@ pub fn NewPostPopup(cx: Scope, hide: UseState<bool>) -> Element {
             },
             div {
                 class: BUTTON_CLASS,
-                onclick: |_|(),
+                onclick: |_| {
+                    router.navigate_to(page::POST_NEW_CHAT);
+                    hide.set(true);
+                },
                 img {
                     class: "invert",
                     src: "/static/icons/icon-messages.svg"
