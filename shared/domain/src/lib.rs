@@ -3,8 +3,10 @@
 extern crate diesel_derive_newtype;
 
 pub mod ids;
+mod post;
 mod user;
 
+pub use post::*;
 pub use user::*;
 
 pub trait UserFacingError {

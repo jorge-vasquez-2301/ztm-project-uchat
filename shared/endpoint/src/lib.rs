@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+pub mod post;
 pub mod user;
 
 pub trait Endpoint {
@@ -10,8 +11,23 @@ pub trait Endpoint {
     }
 }
 
+macro_rules! route {
+    ($url:literal => $request_type:ty) => {
+        impl Endpoint for $request_type {
+            const URL: &'static str = $url;
+        }
+    };
+}
+
 #[derive(thiserror::Error, Debug, Deserialize, Serialize)]
 #[error("{msg}")]
 pub struct RequestFailed {
     pub msg: String,
 }
+
+// public routes
+route!("/account/create" => user::CreateUser);
+route!("/account/login" => user::Login);
+
+// authorized routes
+route!("/post/new" => post::NewPost);
