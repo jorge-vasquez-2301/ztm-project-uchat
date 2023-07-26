@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uchat_domain::ids::PostId;
 
-use super::{Content, NewPostOptions};
+use super::{Content, NewPostOptions, PublicPost};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct NewPost {
@@ -12,4 +12,12 @@ pub struct NewPost {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct NewPostOk {
     pub post_id: PostId,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct TrendingPosts;
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct TrendingPostsOk {
+    pub posts: Vec<PublicPost>,
 }

@@ -31,3 +31,4 @@ route!("/account/login" => user::Login);
 
 // authorized routes
 route!("/post/new" => post::NewPost);
+route!("/posts/trending" => post::TrendingPosts);

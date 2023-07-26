@@ -1,9 +1,9 @@
 use axum::{async_trait, Json};
 use chrono::{Duration, Utc};
 use hyper::StatusCode;
-use uchat_domain::ids::*;
-use uchat_endpoint::user::{CreateUser, CreateUserOk, Login, LoginOk};
-use uchat_query::session::Session;
+use uchat_domain::{ids::*, DisplayName};
+use uchat_endpoint::user::{CreateUser, CreateUserOk, Login, LoginOk, PublicUserProfile};
+use uchat_query::{session::Session, user::User};
 
 use crate::{error::ApiResult, extractor::DbConnection, AppState};
 
@@ -11,6 +11,19 @@ use super::PublicApiRequest;
 
 #[derive(Clone)]
 pub struct SessionSignature(String);
+
+pub fn to_public(user: User) -> ApiResult<PublicUserProfile> {
+    Ok(PublicUserProfile {
+        id: user.id,
+        display_name: user
+            .display_name
+            .and_then(|name| DisplayName::new(name).ok()),
+        handle: user.handle,
+        profile_image: None,
+        created_at: user.created_at,
+        am_following: false,
+    })
+}
 
 fn new_session(
     state: &AppState,

@@ -1,10 +1,14 @@
 use axum::{async_trait, Json};
 use hyper::StatusCode;
-use uchat_endpoint::post::{NewPost, NewPostOk};
-use uchat_query::post::Post;
+use uchat_domain::Username;
+use uchat_endpoint::{
+    post::{LikeStatus, NewPost, NewPostOk, PublicPost, TrendingPosts, TrendingPostsOk},
+    RequestFailed,
+};
+use uchat_query::{post::Post, AsyncConnection};
 
 use crate::{
-    error::ApiResult,
+    error::{ApiError, ApiResult},
     extractor::{DbConnection, UserSession},
     AppState,
 };
@@ -26,5 +30,80 @@ impl AuthorizedApiRequest for NewPost {
         let post_id = uchat_query::post::new(&mut conn, post)?;
 
         Ok((StatusCode::OK, Json(NewPostOk { post_id })))
+    }
+}
+
+pub fn to_public(
+    conn: &mut AsyncConnection,
+    post: Post,
+    _session: Option<&UserSession>,
+) -> ApiResult<PublicPost> {
+    use uchat_query::post as query_post;
+    use uchat_query::user as query_user;
+
+    match serde_json::from_value(post.content.0) {
+        Ok(content) => Ok(PublicPost {
+            id: post.id,
+            by_user: {
+                let profile = query_user::get(conn, post.user_id)?;
+                super::user::to_public(profile)?
+            },
+            content,
+            time_posted: post.time_posted,
+            reply_to: {
+                match post.reply_to {
+                    Some(other_post_id) => {
+                        let orignal_post = query_post::get(conn, other_post_id)?;
+                        let original_user = query_user::get(conn, orignal_post.user_id)?;
+                        Some((
+                            Username::new(original_user.handle).unwrap(),
+                            original_user.id,
+                            other_post_id,
+                        ))
+                    }
+                    None => None,
+                }
+            },
+            like_status: LikeStatus::NoReaction,
+            bookmarked: false,
+            boosted: false,
+            likes: 0,
+            dislikes: 0,
+            boosts: 0,
+        }),
+        Err(_) => Err(ApiError {
+            code: Some(StatusCode::INTERNAL_SERVER_ERROR),
+            err: color_eyre::Report::new(RequestFailed {
+                msg: "invalid post data".to_string(),
+            }),
+        }),
+    }
+}
+
+#[async_trait]
+impl AuthorizedApiRequest for TrendingPosts {
+    type Response = (StatusCode, Json<TrendingPostsOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        _state: AppState,
+    ) -> ApiResult<Self::Response> {
+        use uchat_query::post as query_post;
+
+        let mut posts = vec![];
+
+        for post in query_post::get_trending(&mut conn)? {
+            let post_id = post.id;
+            match to_public(&mut conn, post, Some(&session)) {
+                Ok(post) => posts.push(post),
+                Err(e) => {
+                    tracing::error!(err = %e.err, post_id = ?post_id, "post contains invalid data");
+                }
+            }
+        }
+
+        Ok((StatusCode::OK, Json(TrendingPostsOk { posts })))
     }
 }
