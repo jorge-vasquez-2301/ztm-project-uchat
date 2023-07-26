@@ -1,9 +1,11 @@
 #![allow(non_snake_case)]
 
 use dioxus::prelude::*;
+use dioxus_router::use_router;
 use serde::{Deserialize, Serialize};
+use uchat_domain::{Headline, Message};
 
-use crate::maybe_class;
+use crate::{fetch_json, prelude::*};
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct PageState {
@@ -11,10 +13,15 @@ pub struct PageState {
     pub headline: String,
 }
 
+impl PageState {
+    pub fn can_submit(&self) -> bool {
+        Message::new(&self.message).is_ok()
+            && (self.headline.is_empty() || Headline::new(&self.headline).is_ok())
+    }
+}
+
 #[inline_props]
 pub fn MessageInput(cx: Scope, page_state: UseRef<PageState>) -> Element {
-    use uchat_domain::Message;
-
     let char_count = || page_state.read().message.len();
     const MAX_CHARS: usize = Message::MAX_CHARS;
 
@@ -52,8 +59,6 @@ pub fn MessageInput(cx: Scope, page_state: UseRef<PageState>) -> Element {
 
 #[inline_props]
 pub fn HeadlineInput(cx: Scope, page_state: UseRef<PageState>) -> Element {
-    use uchat_domain::Headline;
-
     let char_count = || page_state.read().headline.len();
     const MAX_CHARS: usize = Headline::MAX_CHARS;
 
@@ -89,20 +94,51 @@ pub fn HeadlineInput(cx: Scope, page_state: UseRef<PageState>) -> Element {
 }
 
 pub fn NewChat(cx: Scope) -> Element {
+    let api_client = ApiClient::global();
     let page_state = use_ref(cx, || PageState::default());
+    let submit_btn_style = maybe_class!("btn-disabled", !page_state.read().can_submit());
+    let router = use_router(cx);
+
+    let form_on_submit =
+        async_handler!(&cx, [api_client, page_state, router], move |_| async move {
+            use uchat_endpoint::post::{Chat, NewPost, NewPostOk, NewPostOptions};
+
+            let request = NewPost {
+                content: Chat {
+                    headline: {
+                        let headline = &page_state.read().headline;
+                        if headline.is_empty() {
+                            None
+                        } else {
+                            Headline::new(headline).ok()
+                        }
+                    },
+                    message: Message::new(&page_state.read().message).unwrap(),
+                }
+                .into(),
+                options: NewPostOptions::default(),
+            };
+
+            let response = fetch_json!(<NewPostOk>, api_client, request);
+            match response {
+                Ok(_) => router.replace_route(page::HOME, None, None),
+                Err(_) => (),
+            }
+        });
+
     cx.render(rsx! {
         form {
             class: "flex flex-col gap-4",
-            onsubmit: |_|(),
+            onsubmit: form_on_submit,
             prevent_default: "onsubmit",
 
             MessageInput { page_state: page_state.clone() },
             HeadlineInput { page_state: page_state.clone() },
 
             button {
-                class: "btn",
+                class: "btn {submit_btn_style}",
                 r#type: "submit",
-                disabled: true,
+                disabled: !page_state.read().can_submit(),
                 "Post"
             }
         }
