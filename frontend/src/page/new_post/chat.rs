@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use chrono::Duration;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 use serde::{Deserialize, Serialize};
@@ -98,9 +99,12 @@ pub fn NewChat(cx: Scope) -> Element {
     let page_state = use_ref(cx, || PageState::default());
     let submit_btn_style = maybe_class!("btn-disabled", !page_state.read().can_submit());
     let router = use_router(cx);
+    let toaster = use_toaster(cx);
 
-    let form_on_submit =
-        async_handler!(&cx, [api_client, page_state, router], move |_| async move {
+    let form_on_submit = async_handler!(
+        &cx,
+        [api_client, page_state, router, toaster],
+        move |_| async move {
             use uchat_endpoint::post::{Chat, NewPost, NewPostOk, NewPostOptions};
 
             let request = NewPost {
@@ -121,10 +125,18 @@ pub fn NewChat(cx: Scope) -> Element {
 
             let response = fetch_json!(<NewPostOk>, api_client, request);
             match response {
-                Ok(_) => router.replace_route(page::HOME, None, None),
-                Err(_) => (),
+                Ok(_) => {
+                    toaster.write().success("Posted", Duration::seconds(3));
+                    router.replace_route(page::HOME, None, None);
+                }
+                Err(e) => {
+                    toaster
+                        .write()
+                        .error(format!("Post failed: {e}"), Duration::seconds(3));
+                }
             }
-        });
+        }
+    );
 
     cx.render(rsx! {
         form {
