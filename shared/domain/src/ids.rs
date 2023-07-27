@@ -1,7 +1,16 @@
 macro_rules! new_id {
     ($name:ident) => {
         #[derive(
-            Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
+            Clone,
+            Copy,
+            Debug,
+            PartialEq,
+            Eq,
+            PartialOrd,
+            Ord,
+            Hash,
+            serde::Deserialize,
+            serde::Serialize,
         )]
         #[cfg_attr(feature = "query", derive(DieselNewType))]
         pub struct $name(uuid::Uuid);

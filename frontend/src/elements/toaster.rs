@@ -73,7 +73,7 @@ impl Toaster {
     }
 }
 
-pub fn use_toaster(cx: Scope) -> &UseAtomRef<Toaster> {
+pub fn use_toaster(cx: &ScopeState) -> &UseAtomRef<Toaster> {
     use_atom_ref(cx, crate::app::TOASTER)
 }
 
