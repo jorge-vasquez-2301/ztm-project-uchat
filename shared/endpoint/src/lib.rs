@@ -31,5 +31,6 @@ route!("/account/login" => user::Login);
 
 // authorized routes
 route!("/post/new" => post::NewPost);
+route!("/post/react" => post::React);
 route!("/post/bookmark" => post::Bookmark);
 route!("/posts/trending" => post::TrendingPosts);
