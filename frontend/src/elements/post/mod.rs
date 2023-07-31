@@ -1,8 +1,12 @@
 #![allow(non_snake_case)]
 
+mod action_bar;
 mod content;
 
-use crate::{app::POST_MANAGER, elements::post::content::Content};
+use crate::{
+    app::POST_MANAGER,
+    elements::post::{action_bar::ActionBar, content::Content},
+};
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 use fermi::{use_atom_ref, UseAtomRef};
@@ -114,6 +118,7 @@ pub fn PublicPostEntry(cx: Scope, post_id: PostId) -> Element {
                 Header { post: this_post },
                 // reply to
                 Content { post: this_post },
+                ActionBar { post_id: this_post.id },
                 hr {}
             }
         }

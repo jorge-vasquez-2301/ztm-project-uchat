@@ -2,7 +2,10 @@ use axum::{async_trait, Json};
 use hyper::StatusCode;
 use uchat_domain::Username;
 use uchat_endpoint::{
-    post::{LikeStatus, NewPost, NewPostOk, PublicPost, TrendingPosts, TrendingPostsOk},
+    post::{
+        Bookmark, BookmarkAction, BookmarkOk, LikeStatus, NewPost, NewPostOk, PublicPost,
+        TrendingPosts, TrendingPostsOk,
+    },
     RequestFailed,
 };
 use uchat_query::{post::Post, AsyncConnection};
@@ -33,10 +36,38 @@ impl AuthorizedApiRequest for NewPost {
     }
 }
 
+#[async_trait]
+impl AuthorizedApiRequest for Bookmark {
+    type Response = (StatusCode, Json<BookmarkOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        _state: AppState,
+    ) -> ApiResult<Self::Response> {
+        match self.action {
+            BookmarkAction::Add => {
+                uchat_query::post::bookmark(&mut conn, session.user_id, self.post_id)?;
+            }
+            BookmarkAction::Remove => {
+                uchat_query::post::delete_bookmark(&mut conn, session.user_id, self.post_id)?;
+            }
+        }
+
+        Ok((
+            StatusCode::OK,
+            Json(BookmarkOk {
+                status: self.action,
+            }),
+        ))
+    }
+}
+
 pub fn to_public(
     conn: &mut AsyncConnection,
     post: Post,
-    _session: Option<&UserSession>,
+    session: Option<&UserSession>,
 ) -> ApiResult<PublicPost> {
     use uchat_query::post as query_post;
     use uchat_query::user as query_user;
@@ -65,7 +96,12 @@ pub fn to_public(
                 }
             },
             like_status: LikeStatus::NoReaction,
-            bookmarked: false,
+            bookmarked: {
+                match session {
+                    Some(session) => query_post::get_bookmark(conn, session.user_id, post.id)?,
+                    None => false,
+                }
+            },
             boosted: false,
             likes: 0,
             dislikes: 0,
