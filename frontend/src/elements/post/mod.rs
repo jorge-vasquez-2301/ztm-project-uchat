@@ -2,6 +2,7 @@
 
 mod action_bar;
 mod content;
+mod quick_respond;
 
 use crate::{
     app::POST_MANAGER,
