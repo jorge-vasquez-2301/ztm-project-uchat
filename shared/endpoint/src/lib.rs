@@ -33,4 +33,5 @@ route!("/account/login" => user::Login);
 route!("/post/new" => post::NewPost);
 route!("/post/react" => post::React);
 route!("/post/bookmark" => post::Bookmark);
+route!("/post/boost" => post::Boost);
 route!("/posts/trending" => post::TrendingPosts);

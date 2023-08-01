@@ -227,3 +227,69 @@ pub fn aggregate_reactions(
         boosts,
     })
 }
+
+pub fn boost(
+    conn: &mut PgConnection,
+    user_id: UserId,
+    post_id: PostId,
+    when: DateTime<Utc>,
+) -> Result<(), DieselError> {
+    let uid = user_id;
+    let pid = post_id;
+    {
+        use crate::schema::boosts::dsl::*;
+        diesel::insert_into(boosts)
+            .values((user_id.eq(uid), post_id.eq(pid), boosted_at.eq(when)))
+            .on_conflict((user_id, post_id))
+            .do_update()
+            .set(boosted_at.eq(when))
+            .execute(conn)
+            .map(|_| ())
+    }
+}
+
+pub fn delete_boost(
+    conn: &mut PgConnection,
+    user_id: UserId,
+    post_id: PostId,
+) -> Result<DeleteStatus, DieselError> {
+    let uid = user_id;
+    let pid = post_id;
+    {
+        use crate::schema::boosts::dsl::*;
+        diesel::delete(boosts)
+            .filter(user_id.eq(uid))
+            .filter(post_id.eq(pid))
+            .execute(conn)
+            .map(|row_count| {
+                if row_count > 0 {
+                    DeleteStatus::Deleted
+                } else {
+                    DeleteStatus::NotFound
+                }
+            })
+    }
+}
+
+pub fn get_boost(
+    conn: &mut PgConnection,
+    user_id: UserId,
+    post_id: PostId,
+) -> Result<bool, DieselError> {
+    let uid = user_id;
+    let pid = post_id;
+    {
+        use crate::schema::boosts::dsl::*;
+        use diesel::dsl::count;
+        boosts
+            .filter(user_id.eq(uid))
+            .filter(post_id.eq(pid))
+            .select(count(post_id))
+            .get_result(conn)
+            .optional()
+            .map(|n: Option<i64>| match n {
+                Some(n) => n == 1,
+                None => false,
+            })
+    }
+}

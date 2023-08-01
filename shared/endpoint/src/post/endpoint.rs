@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uchat_domain::ids::PostId;
 
-use super::{BookmarkAction, Content, LikeStatus, NewPostOptions, PublicPost};
+use super::{BookmarkAction, BoostAction, Content, LikeStatus, NewPostOptions, PublicPost};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct NewPost {
@@ -44,4 +44,15 @@ pub struct ReactOk {
     pub like_status: LikeStatus,
     pub likes: i64,
     pub dislikes: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct Boost {
+    pub post_id: PostId,
+    pub action: BoostAction,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct BoostOk {
+    pub status: BoostAction,
 }

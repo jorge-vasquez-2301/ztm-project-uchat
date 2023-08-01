@@ -4,8 +4,8 @@ use hyper::StatusCode;
 use uchat_domain::Username;
 use uchat_endpoint::{
     post::{
-        Bookmark, BookmarkAction, BookmarkOk, LikeStatus, NewPost, NewPostOk, PublicPost, React,
-        ReactOk, TrendingPosts, TrendingPostsOk,
+        Bookmark, BookmarkAction, BookmarkOk, Boost, BoostAction, BoostOk, LikeStatus, NewPost,
+        NewPostOk, PublicPost, React, ReactOk, TrendingPosts, TrendingPostsOk,
     },
     RequestFailed,
 };
@@ -62,6 +62,34 @@ impl AuthorizedApiRequest for Bookmark {
         Ok((
             StatusCode::OK,
             Json(BookmarkOk {
+                status: self.action,
+            }),
+        ))
+    }
+}
+
+#[async_trait]
+impl AuthorizedApiRequest for Boost {
+    type Response = (StatusCode, Json<BoostOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        _state: AppState,
+    ) -> ApiResult<Self::Response> {
+        match self.action {
+            BoostAction::Add => {
+                uchat_query::post::boost(&mut conn, session.user_id, self.post_id, Utc::now())?;
+            }
+            BoostAction::Remove => {
+                uchat_query::post::delete_boost(&mut conn, session.user_id, self.post_id)?;
+            }
+        }
+
+        Ok((
+            StatusCode::OK,
+            Json(BoostOk {
                 status: self.action,
             }),
         ))
@@ -165,7 +193,12 @@ pub fn to_public(
                     None => false,
                 }
             },
-            boosted: false,
+            boosted: {
+                match session {
+                    Some(session) => query_post::get_boost(conn, session.user_id, post.id)?,
+                    None => false,
+                }
+            },
             likes,
             dislikes,
             boosts,
