@@ -9,7 +9,10 @@ use uchat_endpoint::{
     },
     RequestFailed,
 };
-use uchat_query::{post::Post, AsyncConnection};
+use uchat_query::{
+    post::{AggregatePostInfo, Post},
+    AsyncConnection,
+};
 
 use crate::{
     error::{ApiError, ApiResult},
@@ -91,12 +94,16 @@ impl AuthorizedApiRequest for React {
 
         uchat_query::post::react(&mut conn, reaction)?;
 
+        let AggregatePostInfo {
+            likes, dislikes, ..
+        } = uchat_query::post::aggregate_reactions(&mut conn, self.post_id)?;
+
         Ok((
             StatusCode::OK,
             Json(ReactOk {
                 like_status: self.like_status,
-                likes: 0,
-                dislikes: 0,
+                likes,
+                dislikes,
             }),
         ))
     }
@@ -109,6 +116,13 @@ pub fn to_public(
 ) -> ApiResult<PublicPost> {
     use uchat_query::post as query_post;
     use uchat_query::user as query_user;
+
+    let AggregatePostInfo {
+        likes,
+        dislikes,
+        boosts,
+        ..
+    } = query_post::aggregate_reactions(conn, post.id)?;
 
     match serde_json::from_value(post.content.0) {
         Ok(content) => Ok(PublicPost {
@@ -133,7 +147,18 @@ pub fn to_public(
                     None => None,
                 }
             },
-            like_status: LikeStatus::NoReaction,
+            like_status: {
+                match session {
+                    Some(session) => {
+                        match query_post::get_reaction(conn, post.id, session.user_id)? {
+                            Some(reaction) if reaction.like_status == -1 => LikeStatus::Dislike,
+                            Some(reaction) if reaction.like_status == 1 => LikeStatus::Like,
+                            _ => LikeStatus::NoReaction,
+                        }
+                    }
+                    None => LikeStatus::NoReaction,
+                }
+            },
             bookmarked: {
                 match session {
                     Some(session) => query_post::get_bookmark(conn, session.user_id, post.id)?,
@@ -141,9 +166,9 @@ pub fn to_public(
                 }
             },
             boosted: false,
-            likes: 0,
-            dislikes: 0,
-            boosts: 0,
+            likes,
+            dislikes,
+            boosts,
         }),
         Err(_) => Err(ApiError {
             code: Some(StatusCode::INTERNAL_SERVER_ERROR),
