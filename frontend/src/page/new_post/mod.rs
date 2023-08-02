@@ -1,3 +1,5 @@
-pub mod chat;
+mod chat;
+mod image;
 
-pub use chat::*;
+pub use chat::NewChat;
+pub use image::NewImage;

@@ -9,7 +9,8 @@ pub fn Content<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
     cx.render(rsx! {
         div {
             match &post.content {
-                uchat_endpoint::post::Content::Chat(content) => rsx! { Chat { post_id: post.id, content: content } }
+                uchat_endpoint::post::Content::Chat(content) => rsx! { Chat { post_id: post.id, content: content } },
+                _ => rsx!{""},
             }
         }
     })

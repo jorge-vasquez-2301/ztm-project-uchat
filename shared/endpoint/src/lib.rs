@@ -25,6 +25,27 @@ pub struct RequestFailed {
     pub msg: String,
 }
 
+load_dotenv::load_dotenv!();
+
+pub mod app_url {
+    use std::str::FromStr;
+
+    use url::Url;
+
+    pub const API_URL: &str = std::env!("API_URL");
+
+    pub fn domain_and(fragment: &str) -> Url {
+        Url::from_str(API_URL)
+            .and_then(|url| url.join(fragment))
+            .unwrap()
+    }
+
+    pub mod user_content {
+        pub const ROOT: &str = "usercontent/";
+        pub const IMAGES: &str = "img/";
+    }
+}
+
 // public routes
 route!("/account/create" => user::CreateUser);
 route!("/account/login" => user::Login);

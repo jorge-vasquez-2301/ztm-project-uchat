@@ -1,11 +1,12 @@
 use axum::{async_trait, Json};
 use chrono::Utc;
 use hyper::StatusCode;
-use uchat_domain::Username;
+use uchat_domain::{ids::ImageId, Username};
 use uchat_endpoint::{
+    app_url::{self, user_content},
     post::{
-        Bookmark, BookmarkAction, BookmarkOk, Boost, BoostAction, BoostOk, LikeStatus, NewPost,
-        NewPostOk, PublicPost, React, ReactOk, TrendingPosts, TrendingPostsOk,
+        Bookmark, BookmarkAction, BookmarkOk, Boost, BoostAction, BoostOk, Content, ImageKind,
+        LikeStatus, NewPost, NewPostOk, PublicPost, React, ReactOk, TrendingPosts, TrendingPostsOk,
     },
     RequestFailed,
 };
@@ -17,6 +18,7 @@ use uchat_query::{
 use crate::{
     error::{ApiError, ApiResult},
     extractor::{DbConnection, UserSession},
+    handler::save_image,
     AppState,
 };
 
@@ -32,7 +34,18 @@ impl AuthorizedApiRequest for NewPost {
         session: UserSession,
         _state: AppState,
     ) -> ApiResult<Self::Response> {
-        let post = Post::new(session.user_id, self.content, self.options)?;
+        use uchat_endpoint::post::Content;
+
+        let mut content = self.content;
+        if let Content::Image(ref mut img) = content {
+            if let ImageKind::DataUrl(ref data) = img.kind {
+                let id = ImageId::new();
+                save_image(id, data).await?;
+                img.kind = ImageKind::Id(id);
+            }
+        }
+
+        let post = Post::new(session.user_id, content, self.options)?;
 
         let post_id = uchat_query::post::new(&mut conn, post)?;
 
@@ -153,56 +166,72 @@ pub fn to_public(
     } = query_post::aggregate_reactions(conn, post.id)?;
 
     match serde_json::from_value(post.content.0) {
-        Ok(content) => Ok(PublicPost {
-            id: post.id,
-            by_user: {
-                let profile = query_user::get(conn, post.user_id)?;
-                super::user::to_public(profile)?
-            },
-            content,
-            time_posted: post.time_posted,
-            reply_to: {
-                match post.reply_to {
-                    Some(other_post_id) => {
-                        let orignal_post = query_post::get(conn, other_post_id)?;
-                        let original_user = query_user::get(conn, orignal_post.user_id)?;
-                        Some((
-                            Username::new(original_user.handle).unwrap(),
-                            original_user.id,
-                            other_post_id,
-                        ))
+        Ok(mut content) => {
+            match content {
+                Content::Image(ref mut image) => {
+                    if let ImageKind::Id(id) = image.kind {
+                        let url = app_url::domain_and(user_content::ROOT)
+                            .join(user_content::IMAGES)
+                            .unwrap()
+                            .join(&id.to_string())
+                            .unwrap();
+
+                        image.kind = ImageKind::Url(url);
                     }
-                    None => None,
                 }
-            },
-            like_status: {
-                match session {
-                    Some(session) => {
-                        match query_post::get_reaction(conn, post.id, session.user_id)? {
-                            Some(reaction) if reaction.like_status == -1 => LikeStatus::Dislike,
-                            Some(reaction) if reaction.like_status == 1 => LikeStatus::Like,
-                            _ => LikeStatus::NoReaction,
+                _ => (),
+            }
+            Ok(PublicPost {
+                id: post.id,
+                by_user: {
+                    let profile = query_user::get(conn, post.user_id)?;
+                    super::user::to_public(profile)?
+                },
+                content,
+                time_posted: post.time_posted,
+                reply_to: {
+                    match post.reply_to {
+                        Some(other_post_id) => {
+                            let orignal_post = query_post::get(conn, other_post_id)?;
+                            let original_user = query_user::get(conn, orignal_post.user_id)?;
+                            Some((
+                                Username::new(original_user.handle).unwrap(),
+                                original_user.id,
+                                other_post_id,
+                            ))
                         }
+                        None => None,
                     }
-                    None => LikeStatus::NoReaction,
-                }
-            },
-            bookmarked: {
-                match session {
-                    Some(session) => query_post::get_bookmark(conn, session.user_id, post.id)?,
-                    None => false,
-                }
-            },
-            boosted: {
-                match session {
-                    Some(session) => query_post::get_boost(conn, session.user_id, post.id)?,
-                    None => false,
-                }
-            },
-            likes,
-            dislikes,
-            boosts,
-        }),
+                },
+                like_status: {
+                    match session {
+                        Some(session) => {
+                            match query_post::get_reaction(conn, post.id, session.user_id)? {
+                                Some(reaction) if reaction.like_status == -1 => LikeStatus::Dislike,
+                                Some(reaction) if reaction.like_status == 1 => LikeStatus::Like,
+                                _ => LikeStatus::NoReaction,
+                            }
+                        }
+                        None => LikeStatus::NoReaction,
+                    }
+                },
+                bookmarked: {
+                    match session {
+                        Some(session) => query_post::get_bookmark(conn, session.user_id, post.id)?,
+                        None => false,
+                    }
+                },
+                boosted: {
+                    match session {
+                        Some(session) => query_post::get_boost(conn, session.user_id, post.id)?,
+                        None => false,
+                    }
+                },
+                likes,
+                dislikes,
+                boosts,
+            })
+        }
         Err(_) => Err(ApiError {
             code: Some(StatusCode::INTERNAL_SERVER_ERROR),
             err: color_eyre::Report::new(RequestFailed {
