@@ -200,7 +200,7 @@ pub fn to_public(
                 Content::Poll(ref mut poll) => {
                     for (id, result) in query_post::get_poll_results(conn, post.id)?.results {
                         for choice in &mut poll.choices {
-                            if (choice.id == id) {
+                            if choice.id == id {
                                 choice.num_votes = result;
                                 break;
                             }

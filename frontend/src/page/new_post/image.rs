@@ -4,10 +4,10 @@ use chrono::Duration;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 use serde::{Deserialize, Serialize};
-use uchat_domain::{Caption, Headline, Message};
+use uchat_domain::Caption;
 use web_sys::HtmlInputElement;
 
-use crate::{fetch_json, prelude::*, util};
+use crate::{prelude::*, util};
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct PageState {
