@@ -52,3 +52,37 @@ impl UserFacingError for CaptionError {
         }
     }
 }
+
+#[nutype(validate(present, max_len = 50))]
+#[derive(AsRef, Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PollHeadline(String);
+
+impl PollHeadline {
+    pub const MAX_CHARS: usize = 50;
+}
+
+impl UserFacingError for PollHeadlineError {
+    fn formatted_error(&self) -> &'static str {
+        match self {
+            Self::Missing => "Headline cannot be empty",
+            Self::TooLong => "Headline is too long. Must be at most 50 characters.",
+        }
+    }
+}
+
+#[nutype(validate(present, max_len = 80))]
+#[derive(AsRef, Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PollChoiceDescription(String);
+
+impl PollChoiceDescription {
+    pub const MAX_CHARS: usize = 80;
+}
+
+impl UserFacingError for PollChoiceDescriptionError {
+    fn formatted_error(&self) -> &'static str {
+        match self {
+            Self::Missing => "Poll choice cannot be empty",
+            Self::TooLong => "Poll choice is too long. Must be at most 80 characters.",
+        }
+    }
+}

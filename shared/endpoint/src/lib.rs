@@ -55,4 +55,5 @@ route!("/post/new" => post::NewPost);
 route!("/post/react" => post::React);
 route!("/post/bookmark" => post::Bookmark);
 route!("/post/boost" => post::Boost);
+route!("/post/vote" => post::Vote);
 route!("/posts/trending" => post::TrendingPosts);

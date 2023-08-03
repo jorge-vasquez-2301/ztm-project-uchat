@@ -7,6 +7,7 @@ use uchat_endpoint::{
     post::{
         Bookmark, BookmarkAction, BookmarkOk, Boost, BoostAction, BoostOk, Content, ImageKind,
         LikeStatus, NewPost, NewPostOk, PublicPost, React, ReactOk, TrendingPosts, TrendingPostsOk,
+        Vote, VoteOk,
     },
     RequestFailed,
 };
@@ -110,6 +111,23 @@ impl AuthorizedApiRequest for Boost {
 }
 
 #[async_trait]
+impl AuthorizedApiRequest for Vote {
+    type Response = (StatusCode, Json<VoteOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        _state: AppState,
+    ) -> ApiResult<Self::Response> {
+        let cast =
+            uchat_query::post::vote(&mut conn, session.user_id, self.post_id, self.choice_id)?;
+
+        Ok((StatusCode::OK, Json(VoteOk { cast })))
+    }
+}
+
+#[async_trait]
 impl AuthorizedApiRequest for React {
     type Response = (StatusCode, Json<ReactOk>);
 
@@ -177,6 +195,19 @@ pub fn to_public(
                             .unwrap();
 
                         image.kind = ImageKind::Url(url);
+                    }
+                }
+                Content::Poll(ref mut poll) => {
+                    for (id, result) in query_post::get_poll_results(conn, post.id)?.results {
+                        for choice in &mut poll.choices {
+                            if (choice.id == id) {
+                                choice.num_votes = result;
+                                break;
+                            }
+                        }
+                    }
+                    if let Some(session) = session {
+                        poll.voted = query_post::did_vote(conn, session.user_id, post.id)?;
                     }
                 }
                 _ => (),

@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uchat_domain::{
-    ids::{ImageId, PostId, UserId},
-    Caption, Headline, Message, Username,
+    ids::{ImageId, PollChoiceId, PostId, UserId},
+    Caption, Headline, Message, PollChoiceDescription, PollHeadline, Username,
 };
 use url::Url;
 
@@ -40,9 +40,30 @@ impl From<Image> for Content {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct PollChoice {
+    pub id: PollChoiceId,
+    pub num_votes: i64,
+    pub description: PollChoiceDescription,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct Poll {
+    pub headline: PollHeadline,
+    pub choices: Vec<PollChoice>,
+    pub voted: Option<PollChoiceId>,
+}
+
+impl From<Poll> for Content {
+    fn from(value: Poll) -> Self {
+        Self::Poll(value)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Content {
     Chat(Chat),
     Image(Image),
+    Poll(Poll),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -112,4 +133,10 @@ impl From<BoostAction> for bool {
             BoostAction::Remove => false,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+pub enum VoteCast {
+    Yes,
+    AlreadyVoted,
 }
