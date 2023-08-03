@@ -1,4 +1,5 @@
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{get, post},
     Router,
 };
@@ -6,6 +7,7 @@ use hyper::{header::CONTENT_TYPE, http::HeaderValue, Method};
 use tower::ServiceBuilder;
 use tower_http::{
     cors::CorsLayer,
+    limit::RequestBodyLimitLayer,
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
     LatencyUnit,
 };
@@ -36,7 +38,9 @@ pub fn new_router(state: AppState) -> Router {
         .route(Bookmark::URL, post(with_handler::<Bookmark>))
         .route(Boost::URL, post(with_handler::<Boost>))
         .route(React::URL, post(with_handler::<React>))
-        .route(TrendingPosts::URL, post(with_handler::<TrendingPosts>));
+        .route(TrendingPosts::URL, post(with_handler::<TrendingPosts>))
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(8 * 1024 * 1024));
 
     Router::new()
         .merge(public_routes)
