@@ -7,7 +7,7 @@ use itertools::Itertools;
 use uchat_domain::ids::{PostId, PollChoiceId};
 use uchat_endpoint::post::{ImageKind, PublicPost, VoteCast};
 
-use crate::{prelude::{use_toaster, ApiClient}, maybe_class, async_handler, fetch_json};
+use crate::prelude::*;
 
 #[inline_props]
 pub fn Content<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
