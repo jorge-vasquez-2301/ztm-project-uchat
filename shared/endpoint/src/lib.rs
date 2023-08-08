@@ -57,3 +57,6 @@ route!("/post/bookmark" => post::Bookmark);
 route!("/post/boost" => post::Boost);
 route!("/post/vote" => post::Vote);
 route!("/posts/trending" => post::TrendingPosts);
+route!("/posts/home" => post::HomePosts);
+route!("/posts/liked" => post::LikedPosts);
+route!("/posts/bookmarked" => post::BookmarkedPosts);
