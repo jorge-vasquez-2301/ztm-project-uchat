@@ -23,6 +23,7 @@ pub fn App(cx: Scope) -> Element {
                 class: "
                     max-w-[var(--content-max-width)]
                     min-w-[var(--content-min-width)]
+                    mt-[var(--appbar-height)]
                     mb-[var(--navbar-height)]
                     mx-auto
                     p-4
