@@ -49,6 +49,7 @@ pub mod app_url {
 // public routes
 route!("/account/create" => user::CreateUser);
 route!("/account/login" => user::Login);
+// route!("/profile/view" => user::ViewProfile);
 
 // authorized routes
 route!("/post/new" => post::NewPost);
@@ -60,3 +61,30 @@ route!("/posts/trending" => post::TrendingPosts);
 route!("/posts/home" => post::HomePosts);
 route!("/posts/liked" => post::LikedPosts);
 route!("/posts/bookmarked" => post::BookmarkedPosts);
+route!("/profile/me" => user::GetMyProfile);
+route!("/profile/update" => user::UpdateProfile);
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Update<T> {
+    Change(T),
+    NoChange,
+    SetNull,
+}
+
+impl<T> Update<T> {
+    pub fn into_option(self) -> Option<T> {
+        match self {
+            Self::Change(data) => Some(data),
+            Self::NoChange => None,
+            Self::SetNull => None,
+        }
+    }
+
+    pub fn into_nullable(self) -> Option<Option<T>> {
+        match self {
+            Self::Change(data) => Some(Some(data)),
+            Self::NoChange => None,
+            Self::SetNull => Some(None),
+        }
+    }
+}

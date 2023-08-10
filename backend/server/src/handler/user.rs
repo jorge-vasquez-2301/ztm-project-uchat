@@ -2,12 +2,35 @@ use axum::{async_trait, Json};
 use chrono::{Duration, Utc};
 use hyper::StatusCode;
 use uchat_domain::{ids::*, DisplayName};
-use uchat_endpoint::user::{CreateUser, CreateUserOk, Login, LoginOk, PublicUserProfile};
-use uchat_query::{session::Session, user::User};
+use uchat_endpoint::{
+    user::{
+        CreateUser, CreateUserOk, GetMyProfile, GetMyProfileOk, Login, LoginOk, PublicUserProfile,
+        UpdateProfile, UpdateProfileOk,
+    },
+    Update,
+};
+use uchat_query::{
+    session::Session,
+    user::{UpdateProfileParams, User},
+};
+use url::Url;
 
-use crate::{error::ApiResult, extractor::DbConnection, AppState};
+use crate::{
+    error::ApiResult,
+    extractor::{DbConnection, UserSession},
+    AppState,
+};
 
-use super::PublicApiRequest;
+use super::{save_image, AuthorizedApiRequest, PublicApiRequest};
+
+fn profile_id_to_url(id: &str) -> Url {
+    use uchat_endpoint::app_url::{self, user_content};
+    app_url::domain_and(user_content::ROOT)
+        .join(user_content::IMAGES)
+        .unwrap()
+        .join(id)
+        .unwrap()
+}
 
 #[derive(Clone)]
 pub struct SessionSignature(String);
@@ -108,6 +131,76 @@ impl PublicApiRequest for Login {
                 email: user.email,
                 profile_image: None,
                 user_id: user.id,
+            }),
+        ))
+    }
+}
+
+#[async_trait]
+impl AuthorizedApiRequest for GetMyProfile {
+    type Response = (StatusCode, Json<GetMyProfileOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        state: AppState,
+    ) -> ApiResult<Self::Response> {
+        let user = uchat_query::user::get(&mut conn, session.user_id)?;
+
+        let profile_image_url = user.profile_image.as_ref().map(|id| profile_id_to_url(id));
+
+        Ok((
+            StatusCode::OK,
+            Json(GetMyProfileOk {
+                display_name: user.display_name,
+                email: user.email,
+                profile_image: profile_image_url,
+                user_id: user.id,
+            }),
+        ))
+    }
+}
+
+#[async_trait]
+impl AuthorizedApiRequest for UpdateProfile {
+    type Response = (StatusCode, Json<UpdateProfileOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        state: AppState,
+    ) -> ApiResult<Self::Response> {
+        let password = if let Update::Change(ref password) = self.password {
+            Update::Change(uchat_crypto::hash_password(password)?)
+        } else {
+            Update::NoChange
+        };
+
+        if let Update::Change(ref img) = self.profile_image {
+            let id = ImageId::new();
+            save_image(id, img).await?;
+        }
+
+        let query_params = UpdateProfileParams {
+            id: session.user_id,
+            display_name: self.display_name,
+            email: self.email,
+            password_hash: password,
+            profile_image: self.profile_image.clone(),
+        };
+
+        uchat_query::user::update_profile(&mut conn, query_params)?;
+
+        let user = uchat_query::user::get(&mut conn, session.user_id)?;
+
+        let profile_image_url = user.profile_image.as_ref().map(|id| profile_id_to_url(id));
+
+        Ok((
+            StatusCode::OK,
+            Json(UpdateProfileOk {
+                profile_image: profile_image_url,
             }),
         ))
     }

@@ -17,7 +17,7 @@ use uchat_endpoint::{
         Bookmark, BookmarkedPosts, Boost, HomePosts, LikedPosts, NewPost, React, TrendingPosts,
         Vote,
     },
-    user::{CreateUser, Login},
+    user::{CreateUser, GetMyProfile, Login, UpdateProfile},
     Endpoint,
 };
 
@@ -46,6 +46,8 @@ pub fn new_router(state: AppState) -> Router {
         .route(HomePosts::URL, post(with_handler::<HomePosts>))
         .route(LikedPosts::URL, post(with_handler::<LikedPosts>))
         .route(BookmarkedPosts::URL, post(with_handler::<BookmarkedPosts>))
+        .route(GetMyProfile::URL, post(with_handler::<GetMyProfile>))
+        .route(UpdateProfile::URL, post(with_handler::<UpdateProfile>))
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(8 * 1024 * 1024));
 

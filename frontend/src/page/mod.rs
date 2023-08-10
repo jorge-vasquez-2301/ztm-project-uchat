@@ -1,3 +1,4 @@
+mod edit_profile;
 mod home;
 mod login;
 mod new_post;
@@ -5,6 +6,7 @@ mod register;
 mod route;
 mod trending;
 
+pub use edit_profile::EditProfile;
 pub use home::{Home, HomeBookmarked, HomeLiked};
 pub use login::Login;
 pub use new_post::*;

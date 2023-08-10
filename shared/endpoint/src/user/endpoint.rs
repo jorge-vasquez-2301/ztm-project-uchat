@@ -4,6 +4,8 @@ use uchat_domain::{ids::*, Password, Username};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::Update;
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct CreateUser {
     pub username: Username,
@@ -34,4 +36,28 @@ pub struct LoginOk {
     pub email: Option<String>,
     pub profile_image: Option<Url>,
     pub user_id: UserId,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct GetMyProfile;
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct GetMyProfileOk {
+    pub display_name: Option<String>,
+    pub email: Option<String>,
+    pub profile_image: Option<Url>,
+    pub user_id: UserId,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct UpdateProfile {
+    pub display_name: Update<String>,
+    pub email: Update<String>,
+    pub profile_image: Update<String>,
+    pub password: Update<Password>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct UpdateProfileOk {
+    pub profile_image: Option<Url>,
 }
