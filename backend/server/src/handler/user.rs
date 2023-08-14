@@ -4,8 +4,9 @@ use hyper::StatusCode;
 use uchat_domain::{ids::*, DisplayName};
 use uchat_endpoint::{
     user::{
-        CreateUser, CreateUserOk, GetMyProfile, GetMyProfileOk, Login, LoginOk, PublicUserProfile,
-        UpdateProfile, UpdateProfileOk,
+        CreateUser, CreateUserOk, FollowAction, FollowUser, FollowUserOk, GetMyProfile,
+        GetMyProfileOk, Login, LoginOk, PublicUserProfile, UpdateProfile, UpdateProfileOk,
+        ViewProfile, ViewProfileOk,
     },
     Update,
 };
@@ -42,7 +43,7 @@ pub fn to_public(user: User) -> ApiResult<PublicUserProfile> {
             .display_name
             .and_then(|name| DisplayName::new(name).ok()),
         handle: user.handle,
-        profile_image: None,
+        profile_image: user.profile_image.as_ref().map(|id| profile_id_to_url(id)),
         created_at: user.created_at,
         am_following: false,
     })
@@ -201,6 +202,63 @@ impl AuthorizedApiRequest for UpdateProfile {
             StatusCode::OK,
             Json(UpdateProfileOk {
                 profile_image: profile_image_url,
+            }),
+        ))
+    }
+}
+
+#[async_trait]
+impl AuthorizedApiRequest for ViewProfile {
+    type Response = (StatusCode, Json<ViewProfileOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        state: AppState,
+    ) -> ApiResult<Self::Response> {
+        let profile = uchat_query::user::get(&mut conn, self.for_user)?;
+        let profile = to_public(profile)?;
+
+        let mut posts = vec![];
+
+        for post in uchat_query::post::get_public_posts(&mut conn, self.for_user)? {
+            let post_id = post.id;
+            match super::post::to_public(&mut conn, post, Some(&session)) {
+                Ok(post) => posts.push(post),
+                Err(e) => {
+                    tracing::error!(err = %e.err, post_id = ?post_id, "post contains invalid data");
+                }
+            }
+        }
+
+        Ok((StatusCode::OK, Json(ViewProfileOk { profile, posts })))
+    }
+}
+
+#[async_trait]
+impl AuthorizedApiRequest for FollowUser {
+    type Response = (StatusCode, Json<FollowUserOk>);
+
+    async fn process_request(
+        self,
+        DbConnection(mut conn): DbConnection,
+        session: UserSession,
+        state: AppState,
+    ) -> ApiResult<Self::Response> {
+        match self.action {
+            FollowAction::Follow => {
+                uchat_query::user::follow(&mut conn, session.user_id, self.user_id)?;
+            }
+            FollowAction::Unfollow => {
+                uchat_query::user::unfollow(&mut conn, session.user_id, self.user_id)?;
+            }
+        }
+
+        Ok((
+            StatusCode::OK,
+            Json(FollowUserOk {
+                status: self.action,
             }),
         ))
     }

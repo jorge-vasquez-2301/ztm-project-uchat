@@ -8,12 +8,14 @@ mod quick_respond;
 use crate::{
     app::POST_MANAGER,
     elements::post::{action_bar::ActionBar, content::Content},
+    page::profile_view,
+    sync_handler,
 };
 use dioxus::prelude::*;
-use dioxus_router::use_router;
+use dioxus_router::{use_router, RouterContext};
 use fermi::{use_atom_ref, UseAtomRef};
 use indexmap::IndexMap;
-use uchat_domain::ids::PostId;
+use uchat_domain::ids::{PostId, UserId};
 use uchat_endpoint::post::PublicPost;
 
 pub fn use_post_manager(cx: &ScopeState) -> &UseAtomRef<PostManager> {
@@ -77,6 +79,39 @@ impl PostManager {
     }
 }
 
+pub fn view_profile_onclick(
+    router: &RouterContext,
+    user_id: UserId,
+) -> impl FnMut(MouseEvent) + '_ {
+    sync_handler!([router], move |_| {
+        let route = profile_view(user_id);
+        router.navigate_to(&route);
+    })
+}
+
+#[inline_props]
+pub fn ProfileImage<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
+    let router = use_router(cx);
+
+    let poster_info = &post.by_user;
+
+    let profile_img_src = poster_info
+        .profile_image
+        .as_ref()
+        .map(|url| url.as_str())
+        .unwrap_or_else(|| "");
+
+    cx.render(rsx! {
+        div {
+            img {
+                class: "profile-portrait cursor-pointer",
+                onclick: view_profile_onclick(router, post.by_user.id),
+                src: "{profile_img_src}"
+            }
+        }
+    })
+}
+
 #[inline_props]
 pub fn Header<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
     let (post_date, post_time) = {
@@ -129,7 +164,7 @@ pub fn PublicPostEntry(cx: Scope, post_id: PostId) -> Element {
         div {
             key: "{this_post.id.to_string()}",
             class: "grid grid-cols-[50px_1fr] gap-2 mb-4",
-            div {/* profile image */},
+            ProfileImage { post: this_post },
             div {
                 class: "flex flex-col gap-3",
                 Header { post: this_post },

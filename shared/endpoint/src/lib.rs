@@ -63,6 +63,8 @@ route!("/posts/liked" => post::LikedPosts);
 route!("/posts/bookmarked" => post::BookmarkedPosts);
 route!("/profile/me" => user::GetMyProfile);
 route!("/profile/update" => user::UpdateProfile);
+route!("/profile/view" => user::ViewProfile);
+route!("/user/follow" => user::FollowUser);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Update<T> {

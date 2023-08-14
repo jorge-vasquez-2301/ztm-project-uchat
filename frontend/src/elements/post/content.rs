@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use itertools::Itertools;
-use uchat_domain::ids::{PostId, PollChoiceId};
+use uchat_domain::ids::{PollChoiceId, PostId};
 use uchat_endpoint::post::{ImageKind, PublicPost, VoteCast};
 
 use crate::prelude::*;
@@ -17,7 +17,6 @@ pub fn Content<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
                 uchat_endpoint::post::Content::Chat(content) => rsx! { Chat { post_id: post.id, content: content } },
                 uchat_endpoint::post::Content::Image(content) => rsx! { Image { post_id: post.id, content: content } },
                 uchat_endpoint::post::Content::Poll(content) => rsx! { Poll { post_id: post.id, content: content } },
-                
             }
         }
     })
@@ -88,13 +87,18 @@ pub fn Poll<'a>(
         move |post_id, choice_id| async move {
             use uchat_endpoint::post::{Vote, VoteOk};
 
-            let request_data = Vote {
-                post_id,
-                choice_id,
-            };
+            let request_data = Vote { post_id, choice_id };
             match fetch_json!(<VoteOk>, api_client, request_data) {
-                Ok(VoteOk { cast: VoteCast::Yes }) => toaster.write().success("Vote cast!", chrono::Duration::seconds(3)),
-                Ok(VoteOk { cast: VoteCast::AlreadyVoted }) => toaster.write().success("Already voted", chrono::Duration::seconds(5)),
+                Ok(VoteOk {
+                    cast: VoteCast::Yes,
+                }) => toaster
+                    .write()
+                    .success("Vote cast!", chrono::Duration::seconds(3)),
+                Ok(VoteOk {
+                    cast: VoteCast::AlreadyVoted,
+                }) => toaster
+                    .write()
+                    .success("Already voted", chrono::Duration::seconds(5)),
                 Err(e) => toaster.write().error(
                     format!("Failed to cast vote: {e}"),
                     chrono::Duration::seconds(3),
@@ -103,10 +107,17 @@ pub fn Poll<'a>(
         }
     );
 
-    let total_votes = content.choices.iter().map(|choice| choice.num_votes).sum::<i64>();
+    let total_votes = content
+        .choices
+        .iter()
+        .map(|choice| choice.num_votes)
+        .sum::<i64>();
 
     let leader_ids = {
-        let leaders = content.choices.iter().max_set_by(|x, y|x.num_votes.cmp(&y.num_votes));
+        let leaders = content
+            .choices
+            .iter()
+            .max_set_by(|x, y| x.num_votes.cmp(&y.num_votes));
         let ids: HashSet<PollChoiceId> = HashSet::from_iter(leaders.iter().map(|choice| choice.id));
         ids
     };

@@ -441,3 +441,20 @@ pub fn get_bookmarked_posts(
         .limit(30)
         .get_results(conn)
 }
+
+pub fn get_public_posts(
+    conn: &mut PgConnection,
+    user_id: UserId,
+) -> Result<Vec<Post>, DieselError> {
+    let uid = user_id;
+    {
+        use crate::schema::posts::dsl::*;
+        posts
+            .filter(user_id.eq(uid.as_uuid()))
+            .filter(time_posted.lt(Utc::now()))
+            .filter(direct_message_to.is_null())
+            .order(time_posted.desc())
+            .limit(30)
+            .get_results(conn)
+    }
+}
