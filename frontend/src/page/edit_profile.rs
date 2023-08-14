@@ -232,7 +232,7 @@ pub fn DisplayNameInput(cx: Scope, page_state: UseRef<PageState>) -> Element {
                 input {
                     class: "input-field",
                     id: "display-name",
-                    placeholder: "Email Address",
+                    placeholder: "Display Name",
                     value: "{page_state.read().display_name}",
                     oninput:  move |ev| {
                         match DisplayName::new(&ev.value) {
