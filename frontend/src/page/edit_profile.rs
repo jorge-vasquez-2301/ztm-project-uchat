@@ -254,6 +254,7 @@ pub fn EditProfile(cx: Scope) -> Element {
     let page_state = use_ref(cx, || PageState::default());
     let router = use_router(cx);
     let toaster = use_toaster(cx);
+    let local_profile = use_local_profile(cx);
 
     let disable_submit = page_state.with(|state| state.form_errors.has_messages());
     let submit_btn_style = maybe_class!("btn-disabled", disable_submit);
@@ -286,7 +287,7 @@ pub fn EditProfile(cx: Scope) -> Element {
 
     let form_onsubmit = async_handler!(
         &cx,
-        [api_client, page_state, router, toaster],
+        [api_client, page_state, router, toaster, local_profile],
         move |_| async move {
             use uchat_endpoint::user::{UpdateProfile, UpdateProfileOk};
             use uchat_endpoint::Update;
@@ -331,10 +332,11 @@ pub fn EditProfile(cx: Scope) -> Element {
 
             let response = fetch_json!(<UpdateProfileOk>, api_client, request_data);
             match response {
-                Ok(_) => {
+                Ok(res) => {
                     toaster
                         .write()
                         .success("Profile updated", chrono::Duration::seconds(3));
+                    local_profile.write().image = res.profile_image;
                     router.navigate_to(page::HOME);
                 }
                 Err(e) => {

@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use crate::prelude::*;
 use dioxus::prelude::*;
 
 pub const BUTTON_SELECTED: &str = "border-slate-600";
@@ -56,6 +57,14 @@ where
 }
 
 pub fn Appbar<'a>(cx: Scope<'a, AppbarProps<'a>>) -> Element {
+    let local_profile = use_local_profile(cx);
+    let local_profile = local_profile.read();
+    let profile_img_src = local_profile
+        .image
+        .as_ref()
+        .map(|url| url.as_str())
+        .unwrap_or_else(|| "");
+
     cx.render(rsx! {
         div {
             class: "
@@ -70,7 +79,7 @@ pub fn Appbar<'a>(cx: Scope<'a, AppbarProps<'a>>) -> Element {
                     onclick: |_|(),
                     img {
                         class: "profile-portrait",
-                        src: ""
+                        src: "{profile_img_src}"
                     }
                 },
                 div {
