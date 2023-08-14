@@ -1,3 +1,4 @@
+pub mod appbar;
 mod keyed_notification_box;
 mod navbar;
 mod post;

@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 mod action_bar;
-pub mod appbar;
 mod content;
 mod quick_respond;
 
