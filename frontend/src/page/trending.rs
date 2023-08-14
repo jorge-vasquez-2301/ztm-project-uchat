@@ -18,6 +18,7 @@ pub fn Trending(cx: Scope) -> Element {
             toaster
                 .write()
                 .info("Retrieving trending posts", Duration::seconds(3));
+            post_manager.write().clear();
             let response = fetch_json!(<TrendingPostsOk>, api_client, TrendingPosts);
             match response {
                 Ok(res) => post_manager.write().populate(res.posts.into_iter()),
@@ -43,8 +44,15 @@ pub fn Trending(cx: Scope) -> Element {
         .collect::<Vec<_>>();
 
     cx.render(rsx! {
-        h1 {
-            TrendingPosts.into_iter()
-        }
+        Appbar  {
+           title: "Trending Posts",
+           AppbarImgButton {
+               click_handler: move |_| router.pop_route(),
+               img: "/static/icons/icon-back.svg",
+               label: "Back",
+               title: "Go to the previous page"
+           }
+        },
+        TrendingPosts.into_iter()
     })
 }
