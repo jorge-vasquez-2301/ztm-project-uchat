@@ -64,6 +64,7 @@ pub fn Appbar<'a>(cx: Scope<'a, AppbarProps<'a>>) -> Element {
         .as_ref()
         .map(|url| url.as_str())
         .unwrap_or_else(|| "");
+    let sidebar = use_sidebar(cx);
 
     cx.render(rsx! {
         div {
@@ -76,7 +77,7 @@ pub fn Appbar<'a>(cx: Scope<'a, AppbarProps<'a>>) -> Element {
                 class: "flex flex-row gap-8 items-center w-full pr-5 h-full",
                 div {
                     class: "cursor-pointer",
-                    onclick: |_|(),
+                    onclick: move |_| sidebar.write().open(),
                     img {
                         class: "profile-portrait",
                         src: "{profile_img_src}"
