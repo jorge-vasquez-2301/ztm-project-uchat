@@ -162,7 +162,7 @@ impl AuthorizedApiRequest for GetMyProfile {
         self,
         DbConnection(mut conn): DbConnection,
         session: UserSession,
-        state: AppState,
+        _state: AppState,
     ) -> ApiResult<Self::Response> {
         let user = uchat_query::user::get(&mut conn, session.user_id)?;
 
@@ -188,7 +188,7 @@ impl AuthorizedApiRequest for UpdateProfile {
         self,
         DbConnection(mut conn): DbConnection,
         session: UserSession,
-        state: AppState,
+        _state: AppState,
     ) -> ApiResult<Self::Response> {
         let mut payload = self;
         let password = if let Update::Change(ref password) = payload.password {
@@ -234,7 +234,7 @@ impl AuthorizedApiRequest for ViewProfile {
         self,
         DbConnection(mut conn): DbConnection,
         session: UserSession,
-        state: AppState,
+        _state: AppState,
     ) -> ApiResult<Self::Response> {
         let profile = uchat_query::user::get(&mut conn, self.for_user)?;
         let profile = to_public(&mut conn, Some(&session), profile)?;
@@ -263,7 +263,7 @@ impl AuthorizedApiRequest for FollowUser {
         self,
         DbConnection(mut conn): DbConnection,
         session: UserSession,
-        state: AppState,
+        _state: AppState,
     ) -> ApiResult<Self::Response> {
         if self.user_id == session.user_id {
             return Err(ApiError {

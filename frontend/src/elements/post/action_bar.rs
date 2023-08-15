@@ -215,11 +215,11 @@ pub fn Comment(cx: Scope, opened: UseState<bool>) -> Element {
 }
 
 #[inline_props]
-pub fn QuickRespondBox(cx: Scope, post_id: PostId, opened: UseState<bool>) -> Element {
+pub fn QuickRespondBox(cx: Scope, opened: UseState<bool>) -> Element {
     let element = match *opened.get() {
         true => {
-            to_owned![opened, post_id];
-            Some(rsx! { QuickRespond { post_id: post_id, opened: opened }})
+            to_owned![opened];
+            Some(rsx! { QuickRespond { opened: opened }})
         }
         false => None,
     };
@@ -258,7 +258,6 @@ pub fn ActionBar(cx: Scope, post_id: PostId) -> Element {
             }
         },
         QuickRespondBox {
-            post_id: this_post_id,
             opened: quick_respond_opened
         }
     })

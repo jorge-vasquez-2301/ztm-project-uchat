@@ -41,37 +41,33 @@ pub fn ViewProfile(cx: Scope) -> Element {
         }
     });
 
-    let follow_onclick = async_handler!(
-        &cx,
-        [api_client, toaster, profile, local_profile],
-        move |_| async move {
-            use uchat_endpoint::user::{FollowAction, FollowUser, FollowUserOk};
+    let follow_onclick = async_handler!(&cx, [api_client, toaster, profile], move |_| async move {
+        use uchat_endpoint::user::{FollowAction, FollowUser, FollowUserOk};
 
-            let am_following = match profile.read().as_ref() {
-                Some(profile) => profile.am_following,
-                None => false,
-            };
+        let am_following = match profile.read().as_ref() {
+            Some(profile) => profile.am_following,
+            None => false,
+        };
 
-            let request_data = FollowUser {
-                user_id,
-                action: match am_following {
-                    true => FollowAction::Unfollow,
-                    false => FollowAction::Follow,
-                },
-            };
-            match fetch_json!(<FollowUserOk>, api_client, request_data) {
-                Ok(res) => {
-                    profile.with_mut(|profile| {
-                        profile.as_mut().map(|p| p.am_following = res.status.into());
-                    });
-                }
-                Err(e) => toaster.write().error(
-                    format!("Failed to update follow status: {e}"),
-                    chrono::Duration::seconds(3),
-                ),
+        let request_data = FollowUser {
+            user_id,
+            action: match am_following {
+                true => FollowAction::Unfollow,
+                false => FollowAction::Follow,
+            },
+        };
+        match fetch_json!(<FollowUserOk>, api_client, request_data) {
+            Ok(res) => {
+                profile.with_mut(|profile| {
+                    profile.as_mut().map(|p| p.am_following = res.status.into());
+                });
             }
+            Err(e) => toaster.write().error(
+                format!("Failed to update follow status: {e}"),
+                chrono::Duration::seconds(3),
+            ),
         }
-    );
+    });
 
     let ProfileSection = {
         match profile.with(|profile| profile.clone()) {

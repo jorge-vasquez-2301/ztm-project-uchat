@@ -43,16 +43,18 @@ pub fn err_response<T: Into<String>>(code: StatusCode, msg: T) -> Response {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        match self.code {
-            Some(code) => return err_response(code, format!("{}", self.err)),
-            None => return err_response(StatusCode::INTERNAL_SERVER_ERROR, "server error"),
+        if let Some(code) = self.code {
+            return err_response(code, format!("{}", self.err));
         }
 
-        match self.err.downcast_ref::<ServerError>() {
-            Some(ServerError::Login((code, msg))) => err_response(*code, msg),
-            Some(ServerError::Registration((code, msg))) => err_response(*code, msg),
-            _ => err_response(StatusCode::INTERNAL_SERVER_ERROR, "server error"),
+        if let Some(server_err) = self.err.downcast_ref::<ServerError>() {
+            return match server_err {
+                ServerError::Login((code, msg)) => err_response(*code, msg),
+                ServerError::Registration((code, msg)) => err_response(*code, msg),
+            };
         }
+
+        err_response(StatusCode::INTERNAL_SERVER_ERROR, "server error")
     }
 }
 

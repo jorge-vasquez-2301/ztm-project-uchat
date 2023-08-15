@@ -166,8 +166,6 @@ pub fn is_following(
 
 #[cfg(test)]
 pub mod tests {
-    use crate::test_db::Result;
-
     pub mod util {
         use diesel::PgConnection;
 

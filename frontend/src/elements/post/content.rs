@@ -14,8 +14,8 @@ pub fn Content<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
     cx.render(rsx! {
         div {
             match &post.content {
-                uchat_endpoint::post::Content::Chat(content) => rsx! { Chat { post_id: post.id, content: content } },
-                uchat_endpoint::post::Content::Image(content) => rsx! { Image { post_id: post.id, content: content } },
+                uchat_endpoint::post::Content::Chat(content) => rsx! { Chat { content: content } },
+                uchat_endpoint::post::Content::Image(content) => rsx! { Image { content: content } },
                 uchat_endpoint::post::Content::Poll(content) => rsx! { Poll { post_id: post.id, content: content } },
             }
         }
@@ -23,11 +23,7 @@ pub fn Content<'a>(cx: Scope<'a>, post: &'a PublicPost) -> Element<'a> {
 }
 
 #[inline_props]
-pub fn Chat<'a>(
-    cx: Scope<'a>,
-    post_id: PostId,
-    content: &'a uchat_endpoint::post::Chat,
-) -> Element<'a> {
+pub fn Chat<'a>(cx: Scope<'a>, content: &'a uchat_endpoint::post::Chat) -> Element<'a> {
     let Headline = content.headline.as_ref().map(|headline| {
         rsx! {
             div {
@@ -46,11 +42,7 @@ pub fn Chat<'a>(
 }
 
 #[inline_props]
-pub fn Image<'a>(
-    cx: Scope<'a>,
-    post_id: PostId,
-    content: &'a uchat_endpoint::post::Image,
-) -> Element<'a> {
+pub fn Image<'a>(cx: Scope<'a>, content: &'a uchat_endpoint::post::Image) -> Element<'a> {
     let ImageKind::Url(ref url) = content.kind else {
         return cx.render(rsx! { "image not found" });
     };

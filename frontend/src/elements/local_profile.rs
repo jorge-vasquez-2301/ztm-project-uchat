@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 
-use crate::prelude::*;
 use dioxus::prelude::*;
 use fermi::{use_atom_ref, UseAtomRef};
 use uchat_domain::ids::UserId;

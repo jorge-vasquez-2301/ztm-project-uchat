@@ -67,7 +67,7 @@ impl EmailRegex {
 }
 
 fn is_valid_email(email: &str) -> bool {
-    let email_regex = EMAIL_REGEX.get_or_init(|| EmailRegex::init());
+    let email_regex = EMAIL_REGEX.get_or_init(EmailRegex::init);
 
     email_regex.is_valid(email)
 }
