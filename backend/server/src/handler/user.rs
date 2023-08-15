@@ -8,16 +8,17 @@ use uchat_endpoint::{
         GetMyProfileOk, Login, LoginOk, PublicUserProfile, UpdateProfile, UpdateProfileOk,
         ViewProfile, ViewProfileOk,
     },
-    Update,
+    RequestFailed, Update,
 };
 use uchat_query::{
     session::Session,
     user::{UpdateProfileParams, User},
+    AsyncConnection,
 };
 use url::Url;
 
 use crate::{
-    error::ApiResult,
+    error::{ApiError, ApiResult},
     extractor::{DbConnection, UserSession},
     AppState,
 };
@@ -36,7 +37,11 @@ fn profile_id_to_url(id: &str) -> Url {
 #[derive(Clone)]
 pub struct SessionSignature(String);
 
-pub fn to_public(user: User) -> ApiResult<PublicUserProfile> {
+pub fn to_public(
+    conn: &mut AsyncConnection,
+    session: Option<&UserSession>,
+    user: User,
+) -> ApiResult<PublicUserProfile> {
     Ok(PublicUserProfile {
         id: user.id,
         display_name: user
@@ -45,7 +50,12 @@ pub fn to_public(user: User) -> ApiResult<PublicUserProfile> {
         handle: user.handle,
         profile_image: user.profile_image.as_ref().map(|id| profile_id_to_url(id)),
         created_at: user.created_at,
-        am_following: false,
+        am_following: {
+            match session {
+                Some(session) => uchat_query::user::is_following(conn, session.user_id, user.id)?,
+                None => false,
+            }
+        },
     })
 }
 
@@ -220,7 +230,7 @@ impl AuthorizedApiRequest for ViewProfile {
         state: AppState,
     ) -> ApiResult<Self::Response> {
         let profile = uchat_query::user::get(&mut conn, self.for_user)?;
-        let profile = to_public(profile)?;
+        let profile = to_public(&mut conn, Some(&session), profile)?;
 
         let mut posts = vec![];
 
@@ -248,6 +258,14 @@ impl AuthorizedApiRequest for FollowUser {
         session: UserSession,
         state: AppState,
     ) -> ApiResult<Self::Response> {
+        if self.user_id == session.user_id {
+            return Err(ApiError {
+                code: Some(StatusCode::BAD_REQUEST),
+                err: color_eyre::Report::new(RequestFailed {
+                    msg: "cannot follow self".to_string(),
+                }),
+            });
+        }
         match self.action {
             FollowAction::Follow => {
                 uchat_query::user::follow(&mut conn, session.user_id, self.user_id)?;
