@@ -51,10 +51,10 @@ pub fn KeyedNotificationBox<'a>(cx: Scope<'a, KeyedNotificationProps<'a>>) -> El
             fieldset {
                 class: "fieldset border-red-300 rounded",
                 "{legend}"
-            }
-            ul {
-                class: "list-disc ml-4",
-                notifications
+                ul {
+                    class: "list-disc ml-4",
+                    notifications
+                }
             }
         }),
         false => None,
