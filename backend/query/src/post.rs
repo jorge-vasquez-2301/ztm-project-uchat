@@ -458,3 +458,43 @@ pub fn get_public_posts(
             .get_results(conn)
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::test_db::{self, Result};
+    use crate::user::tests::util as test_user;
+
+    use uchat_endpoint::post::NewPostOptions;
+    use util as test_post;
+
+    use super::Post;
+    pub mod util {
+        use uchat_domain::Message;
+        use uchat_endpoint::post::{Chat, Content};
+
+        pub fn new_chat(msg: &str) -> Content {
+            Content::Chat(Chat {
+                headline: None,
+                message: Message::new(msg).unwrap(),
+            })
+        }
+    }
+
+    #[test]
+    fn new_and_get() -> Result<()> {
+        // setup
+        let mut conn = test_db::new_connection();
+        let user1 = test_user::new_user(&mut conn, "user 1");
+
+        // new post
+        let content = test_post::new_chat("test message");
+        let post = Post::new(user1.id, content, NewPostOptions::default())
+            .expect("failed to create new post structure");
+        let post_id = super::new(&mut conn, post).expect("failed to create post");
+
+        // get post
+        let post = super::get(&mut conn, post_id)?;
+        assert_eq!(post.id, post_id);
+        Ok(())
+    }
+}
